@@ -1,0 +1,29 @@
+import json
+import boto3
+import os
+from urllib.parse import unquote_plus
+
+# AWS service clients
+s3 = boto3.client('s3')
+dynamodb = boto3.resource('dynamodb')
+
+# DynamoDB table name from environment variable
+TABLE_NAME = os.environ['DYNAMODB_TABLE']
+table = dynamodb.Table(TABLE_NAME)
+
+def lambda_handler(event, context):
+    for record in event['Records']:
+        bucket_name = record['s3']['bucket']['name']
+        object_key = unquote_plus(record['s3']['object']['key'])
+        s3_response = s3.head_object(Bucket=bucket_name, Key=object_key)
+        file_size = s3_response.get('ContentLength')
+        content_type = s3_response.get('ContentType')
+        item = {
+            'fileName': object_key,
+            'bucketName': bucket_name,
+            'fileSize': file_size,
+            'contentType': content_type,
+        }
+        table.put_item(Item=item)
+        print(f"Metadata stored: {object_key}")
+    return {'statusCode': 200, 'body': json.dumps("Success")}

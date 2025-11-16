@@ -1,0 +1,31 @@
+<?php
+/**
+ * Plugin Name: DynamoDB Media API
+ * Description: Fetches uploaded S3 file metadata stored in DynamoDB.
+ * Version: 1.0
+ */
+
+use Aws\DynamoDb\DynamoDbClient;
+
+add_action('rest_api_init', function () {
+    register_rest_route('media/v1', '/files', array(
+        'methods' => 'GET',
+        'callback' => 'get_dynamodb_files'
+    ));
+});
+
+function get_dynamodb_files() {
+
+    require 'vendor/autoload.php';
+
+    $db = new DynamoDbClient([
+        'version' => 'latest',
+        'region'  => 'us-east-1'
+    ]);
+
+    $result = $db->scan([
+        'TableName' => 'wordpress-table-data'
+    ]);
+
+    return $result['Items'];
+}
